@@ -10,6 +10,7 @@ import Agenda from "./pages/Agenda";
 import Leads from "./pages/Leads";
 import SprayCalculator from "./pages/SprayCalculator";
 import WeatherForecast from "./pages/WeatherForecast";
+import DroneHistory from "./pages/DroneHistory";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/leads" element={<ProtectedRoute><Layout><Leads /></Layout></ProtectedRoute>} />
           <Route path="/calculadora" element={<ProtectedRoute><Layout><SprayCalculator /></Layout></ProtectedRoute>} />
           <Route path="/previsao" element={<ProtectedRoute><Layout><WeatherForecast /></Layout></ProtectedRoute>} />
+          <Route path="/historico-voos" element={<ProtectedRoute><Layout><DroneHistory /></Layout></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

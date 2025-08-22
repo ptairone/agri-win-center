@@ -95,6 +95,66 @@ export type Database = {
         }
         Relationships: []
       }
+      drone_flights: {
+        Row: {
+          application_width: number
+          area_covered: number | null
+          created_at: string
+          culture: string
+          droplet_type: string
+          flight_date: string
+          flight_height: number
+          flow_rate: number
+          id: string
+          notes: string | null
+          products: Json
+          solid_products: Json
+          speed: number
+          total_volume: number | null
+          updated_at: string
+          user_id: string
+          weather_conditions: string | null
+        }
+        Insert: {
+          application_width: number
+          area_covered?: number | null
+          created_at?: string
+          culture: string
+          droplet_type: string
+          flight_date?: string
+          flight_height: number
+          flow_rate: number
+          id?: string
+          notes?: string | null
+          products?: Json
+          solid_products?: Json
+          speed: number
+          total_volume?: number | null
+          updated_at?: string
+          user_id: string
+          weather_conditions?: string | null
+        }
+        Update: {
+          application_width?: number
+          area_covered?: number | null
+          created_at?: string
+          culture?: string
+          droplet_type?: string
+          flight_date?: string
+          flight_height?: number
+          flow_rate?: number
+          id?: string
+          notes?: string | null
+          products?: Json
+          solid_products?: Json
+          speed?: number
+          total_volume?: number | null
+          updated_at?: string
+          user_id?: string
+          weather_conditions?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           city: string | null

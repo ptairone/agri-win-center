@@ -6,6 +6,7 @@ import {
   Users, 
   Calculator, 
   CloudSun, 
+  Plane,
   LogOut, 
   Menu, 
   X,
@@ -25,6 +26,7 @@ const Header = () => {
     { name: "Leads", href: "/leads", icon: Users },
     { name: "Calculadora", href: "/calculadora", icon: Calculator },
     { name: "Previsão", href: "/previsao", icon: CloudSun },
+    { name: "Histórico Voos", href: "/historico-voos", icon: Plane },
   ];
 
   const isActive = (path: string) => location.pathname === path;
