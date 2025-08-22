@@ -31,14 +31,20 @@ export const useAppointments = () => {
 
       if (error) throw error;
 
+      // Formato de tempo do Supabase (HH:MM:SS) para input HTML (HH:MM)
+      const formatTimeFromDB = (time: string) => {
+        if (!time) return "";
+        return time.split(':').slice(0, 2).join(':');
+      };
+
       const formattedAppointments = data.map(apt => ({
         id: apt.id,
         type: apt.type as Appointment["type"],
         title: apt.title,
         description: apt.description || "",
         date: apt.date,
-        time: apt.time,
-        end_time: apt.end_time,
+        time: formatTimeFromDB(apt.time),
+        end_time: apt.end_time ? formatTimeFromDB(apt.end_time) : undefined,
         responsible: apt.responsible,
         client: apt.client,
         location: apt.location,
@@ -70,13 +76,19 @@ export const useAppointments = () => {
         return false;
       }
 
+      // Formato de tempo para Supabase (HH:MM:SS)
+      const formatTimeForDB = (time: string) => {
+        if (!time) return null;
+        return time.includes(':') && time.split(':').length === 2 ? `${time}:00` : time;
+      };
+
       const dbData = {
         type: appointmentData.type,
         title: appointmentData.title,
         description: appointmentData.description,
         date: appointmentData.date,
-        time: appointmentData.time,
-        end_time: appointmentData.end_time,
+        time: formatTimeForDB(appointmentData.time),
+        end_time: appointmentData.end_time ? formatTimeForDB(appointmentData.end_time) : null,
         responsible: appointmentData.responsible,
         client: appointmentData.client,
         location: appointmentData.location,
