@@ -12,7 +12,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useDroneFlights } from "@/hooks/useDroneFlights";
 import type { DroneFlightData } from "@/hooks/useDroneFlights";
 import { Separator } from "@/components/ui/separator";
-import { Plane, Plus, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plane, Plus, Trash2, Download, Eye, Calendar, MapPin } from "lucide-react";
 
 const flightSchema = z.object({
   flight_date: z.string(),
@@ -38,6 +40,7 @@ const DroneHistory = () => {
   const { createFlight, flights, isLoading } = useDroneFlights();
   const [liquidProducts, setLiquidProducts] = useState<Product[]>([{ name: "", dosage: 0, unit: "L/ha" }]);
   const [solidProducts, setSolidProducts] = useState<Product[]>([{ name: "", dosage: 0, unit: "kg/ha" }]);
+  const [activeTab, setActiveTab] = useState("new-flight");
 
   const form = useForm<z.infer<typeof flightSchema>>({
     resolver: zodResolver(flightSchema),
@@ -107,6 +110,67 @@ const DroneHistory = () => {
     form.reset();
     setLiquidProducts([{ name: "", dosage: 0, unit: "L/ha" }]);
     setSolidProducts([{ name: "", dosage: 0, unit: "kg/ha" }]);
+    
+    // Switch to history tab
+    setActiveTab("history");
+  };
+
+  const exportToCSV = () => {
+    if (!flights || flights.length === 0) return;
+
+    const headers = [
+      "Data",
+      "Cultura",
+      "Altura (m)",
+      "Velocidade (m/s)",
+      "Faixa (m)",
+      "Tipo de Gota",
+      "Vazão (L/min)",
+      "Área (ha)",
+      "Volume Total (L)",
+      "Produtos Líquidos",
+      "Produtos Sólidos",
+      "Condições Climáticas",
+      "Observações"
+    ];
+
+    const csvContent = [
+      headers.join(","),
+      ...flights.map(flight => {
+        const liquidProducts = Array.isArray(flight.products) 
+          ? flight.products.map((p: any) => `${p.name} (${p.dosage}${p.unit})`).join("; ") 
+          : "";
+        const solidProducts = Array.isArray(flight.solid_products) 
+          ? flight.solid_products.map((p: any) => `${p.name} (${p.dosage}${p.unit})`).join("; ") 
+          : "";
+
+        return [
+          new Date(flight.flight_date).toLocaleDateString('pt-BR'),
+          flight.culture,
+          flight.flight_height,
+          flight.speed,
+          flight.application_width,
+          flight.droplet_type,
+          flight.flow_rate,
+          flight.area_covered || "",
+          flight.total_volume || "",
+          `"${liquidProducts}"`,
+          `"${solidProducts}"`,
+          `"${flight.weather_conditions || ""}"`,
+          `"${flight.notes || ""}"`
+        ].join(",");
+      })
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `historico-voos-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -121,7 +185,14 @@ const DroneHistory = () => {
         </div>
       </div>
 
-      <Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="new-flight">Novo Voo</TabsTrigger>
+          <TabsTrigger value="history">Histórico</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="new-flight">
+          <Card>
         <CardHeader>
           <CardTitle>Novo Registro de Voo</CardTitle>
         </CardHeader>
@@ -458,40 +529,191 @@ const DroneHistory = () => {
           </Form>
         </CardContent>
       </Card>
+        </TabsContent>
 
-      {/* Lista de voos salvos */}
-      {flights && flights.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Histórico de Voos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {flights.map((flight) => (
-                <div key={flight.id} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold">{flight.culture}</h4>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(flight.flight_date).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-muted-foreground">
-                    <div>Altura: {flight.flight_height}m</div>
-                    <div>Velocidade: {flight.speed}m/s</div>
-                    <div>Faixa: {flight.application_width}m</div>
-                    <div>Vazão: {flight.flow_rate}L/min</div>
-                  </div>
-                  {flight.area_covered && (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Área: {flight.area_covered}ha
-                    </div>
-                  )}
-                </div>
-              ))}
+        <TabsContent value="history">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold">Histórico Completo</h2>
+                <p className="text-muted-foreground">
+                  {flights?.length || 0} voo(s) registrado(s)
+                </p>
+              </div>
+              <Button onClick={exportToCSV} disabled={!flights || flights.length === 0}>
+                <Download className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+
+            {flights && flights.length > 0 ? (
+              <div className="space-y-4">
+                {flights.map((flight) => (
+                  <Card key={flight.id}>
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        {/* Header do voo */}
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1">
+                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-primary" />
+                              {flight.culture}
+                            </h3>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Calendar className="h-4 w-4" />
+                              {new Date(flight.flight_date).toLocaleDateString('pt-BR')}
+                            </div>
+                          </div>
+                          <Badge variant="secondary" className="ml-2">
+                            {flight.droplet_type}
+                          </Badge>
+                        </div>
+
+                        <Separator />
+
+                        {/* Parâmetros técnicos */}
+                        <div>
+                          <h4 className="font-medium mb-3">Parâmetros Técnicos</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Altura de Voo</p>
+                              <p className="font-medium">{flight.flight_height}m</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Velocidade</p>
+                              <p className="font-medium">{flight.speed}m/s</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Faixa de Aplicação</p>
+                              <p className="font-medium">{flight.application_width}m</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Vazão</p>
+                              <p className="font-medium">{flight.flow_rate}L/min</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Área e Volume */}
+                        {(flight.area_covered || flight.total_volume) && (
+                          <>
+                            <Separator />
+                            <div>
+                              <h4 className="font-medium mb-3">Área e Volume</h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                {flight.area_covered && (
+                                  <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Área Coberta</p>
+                                    <p className="font-medium">{flight.area_covered}ha</p>
+                                  </div>
+                                )}
+                                {flight.total_volume && (
+                                  <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Volume Total</p>
+                                    <p className="font-medium">{flight.total_volume}L</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {/* Produtos Aplicados */}
+                        {((Array.isArray(flight.products) && flight.products.length > 0) || 
+                          (Array.isArray(flight.solid_products) && flight.solid_products.length > 0)) && (
+                          <>
+                            <Separator />
+                            <div>
+                              <h4 className="font-medium mb-3">Produtos Aplicados</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {Array.isArray(flight.products) && flight.products.length > 0 && (
+                                  <div>
+                                    <h5 className="text-sm font-medium text-muted-foreground mb-2">Produtos Líquidos</h5>
+                                    <div className="space-y-2">
+                                      {flight.products.map((product: any, index: number) => (
+                                        <div key={index} className="flex justify-between items-center bg-muted/50 rounded-lg p-2">
+                                          <span className="font-medium">{product.name}</span>
+                                          <Badge variant="outline">
+                                            {product.dosage}{product.unit}
+                                          </Badge>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {Array.isArray(flight.solid_products) && flight.solid_products.length > 0 && (
+                                  <div>
+                                    <h5 className="text-sm font-medium text-muted-foreground mb-2">Produtos Sólidos</h5>
+                                    <div className="space-y-2">
+                                      {flight.solid_products.map((product: any, index: number) => (
+                                        <div key={index} className="flex justify-between items-center bg-muted/50 rounded-lg p-2">
+                                          <span className="font-medium">{product.name}</span>
+                                          <Badge variant="outline">
+                                            {product.dosage}{product.unit}
+                                          </Badge>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {/* Condições e Observações */}
+                        {(flight.weather_conditions || flight.notes) && (
+                          <>
+                            <Separator />
+                            <div>
+                              <h4 className="font-medium mb-3">Informações Adicionais</h4>
+                              <div className="space-y-3">
+                                {flight.weather_conditions && (
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Condições Climáticas</p>
+                                    <p className="mt-1">{flight.weather_conditions}</p>
+                                  </div>
+                                )}
+                                {flight.notes && (
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">Observações</p>
+                                    <p className="mt-1">{flight.notes}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="bg-muted rounded-full p-3">
+                      <Plane className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium">Nenhum voo registrado</h3>
+                      <p className="text-muted-foreground">
+                        Adicione seu primeiro registro de voo na aba "Novo Voo"
+                      </p>
+                    </div>
+                    <Button onClick={() => setActiveTab("new-flight")} variant="outline">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Voo
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
