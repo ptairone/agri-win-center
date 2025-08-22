@@ -162,7 +162,64 @@ export const useAppointments = () => {
 
   useEffect(() => {
     fetchAppointments();
-  }, []);
+    
+    // Configurar realtime para notificações
+    const channel = supabase
+      .channel('appointments_notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'appointments'
+        },
+        (payload) => {
+          const newAppointment = payload.new as any;
+          
+          // Só mostrar notificação se não foi o usuário atual que criou
+          supabase.auth.getUser().then(({ data: userData }) => {
+            if (userData.user && newAppointment.user_id !== userData.user.id) {
+              toast({
+                title: "Novo Agendamento",
+                description: `${newAppointment.title} foi agendado para ${new Date(newAppointment.date).toLocaleDateString('pt-BR')} às ${newAppointment.time.slice(0, 5)}`,
+              });
+            }
+          });
+          
+          // Atualizar lista local
+          fetchAppointments();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'appointments'
+        },
+        (payload) => {
+          const updatedAppointment = payload.new as any;
+          
+          // Só mostrar notificação se não foi o usuário atual que atualizou
+          supabase.auth.getUser().then(({ data: userData }) => {
+            if (userData.user && updatedAppointment.user_id !== userData.user.id) {
+              toast({
+                title: "Agendamento Atualizado",
+                description: `${updatedAppointment.title} foi atualizado`,
+              });
+            }
+          });
+          
+          // Atualizar lista local
+          fetchAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [toast]);
 
   return {
     appointments,
