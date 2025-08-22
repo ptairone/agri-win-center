@@ -4,22 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Calculator } from "lucide-react";
-
-interface Product {
-  id: string;
-  name: string;
-  dose: number;
-  unit: "L/ha" | "kg/ha";
-}
-
-interface CalculationResult {
-  totalWater: number;
-  totalTanks: number;
-  productQuantities: { name: string; totalQuantity: number; quantityPerTank: number; unit: string }[];
-}
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Trash2, Calculator, Save, History } from "lucide-react";
+import { useSprayCalculations, type Product, type CalculationResult } from "@/hooks/useSprayCalculations";
+import { useToast } from "@/hooks/use-toast";
 
 const SprayCalculator = () => {
+  const { calculations, loading, saveCalculation, deleteCalculation } = useSprayCalculations();
+  const { toast } = useToast();
+  
   const [area, setArea] = useState<number>(0);
   const [sprayRate, setSprayRate] = useState<number>(200);
   const [tankVolume, setTankVolume] = useState<number>(2000);
@@ -27,6 +20,9 @@ const SprayCalculator = () => {
     { id: "1", name: "", dose: 0, unit: "L/ha" }
   ]);
   const [results, setResults] = useState<CalculationResult | null>(null);
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [calculationName, setCalculationName] = useState("");
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const addProduct = () => {
     const newProduct: Product = {
@@ -77,11 +73,90 @@ const SprayCalculator = () => {
     });
   };
 
+  const handleSaveCalculation = async () => {
+    if (!calculationName.trim() || !results) {
+      toast({
+        title: "Erro",
+        description: "Preencha o nome do cálculo e execute o cálculo primeiro",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const success = await saveCalculation(calculationName, area, sprayRate, tankVolume, products, results);
+    if (success) {
+      setIsSaveDialogOpen(false);
+      setCalculationName("");
+    }
+  };
+
+  const loadCalculation = (calculation: any) => {
+    setArea(calculation.area);
+    setSprayRate(calculation.sprayRate);
+    setTankVolume(calculation.tankVolume);
+    setProducts(calculation.products);
+    setResults(calculation.results);
+    setIsHistoryOpen(false);
+    
+    toast({
+      title: "Sucesso",
+      description: "Cálculo carregado!"
+    });
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="text-center">
         <h1 className="text-3xl font-bold mb-2">Calculadora de Calda</h1>
         <p className="text-muted-foreground">Calcule a quantidade de produtos e água para pulverização</p>
+        <div className="flex justify-center gap-4 mt-4">
+          <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <History className="h-4 w-4 mr-2" />
+                Histórico
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Histórico de Cálculos</DialogTitle>
+                <DialogDescription>Seus cálculos salvos anteriormente</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                {calculations.map((calc) => (
+                  <Card key={calc.id} className="cursor-pointer hover:bg-muted/50" onClick={() => loadCalculation(calc)}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium">{calc.name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {calc.area} ha • {calc.results.totalTanks} tanques • {calc.createdAt}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteCalculation(calc.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {calculations.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calculator className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhum cálculo salvo ainda</p>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -192,10 +267,49 @@ const SprayCalculator = () => {
               ))}
             </div>
 
-            <Button onClick={calculate} className="w-full" size="lg">
-              <Calculator className="h-4 w-4 mr-2" />
-              Calcular Calda
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={calculate} className="flex-1" size="lg">
+                <Calculator className="h-4 w-4 mr-2" />
+                Calcular Calda
+              </Button>
+              {results && (
+                <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="lg">
+                      <Save className="h-4 w-4 mr-2" />
+                      Salvar
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Salvar Cálculo</DialogTitle>
+                      <DialogDescription>
+                        Dê um nome ao seu cálculo para salvá-lo
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="calculation-name">Nome do Cálculo</Label>
+                        <Input
+                          id="calculation-name"
+                          value={calculationName}
+                          onChange={(e) => setCalculationName(e.target.value)}
+                          placeholder="Ex: Aplicação Soja Safra 2024"
+                        />
+                      </div>
+                      <div className="flex justify-end space-x-2">
+                        <Button variant="outline" onClick={() => setIsSaveDialogOpen(false)}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleSaveCalculation}>
+                          Salvar
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
           </CardContent>
         </Card>
 

@@ -12,10 +12,12 @@ import {
   Wheat 
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { signOut } = useAuth();
 
   const navigation = [
     { name: "Início", href: "/", icon: Home },
@@ -65,7 +67,7 @@ const Header = () => {
 
           {/* Logout Button */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="outline" size="sm" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+            <Button variant="outline" size="sm" className="bg-white/10 border-white/20 text-white hover:bg-white/20" onClick={() => signOut()}>
               <LogOut className="h-4 w-4 mr-2" />
               Sair
             </Button>

@@ -10,56 +10,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Filter, Edit, Trash2, Users, Phone, Mail, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface Lead {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  farm: string;
-  city: string;
-  state: string;
-  status: "frio" | "morno" | "quente";
-  hectares: number;
-  mainCrop: string;
-  otherCrops: string;
-  notes: string;
-  createdAt: string;
-}
+import { useLeads, type Lead } from "@/hooks/useLeads";
 
 const Leads = () => {
-  const [leads, setLeads] = useState<Lead[]>([
-    {
-      id: "1",
-      name: "João Silva",
-      phone: "(16) 99999-9999",
-      email: "joao@fazenda.com",
-      farm: "Fazenda São João",
-      city: "Ribeirão Preto",
-      state: "SP",
-      status: "quente",
-      hectares: 500,
-      mainCrop: "Soja",
-      otherCrops: "Milho, Café",
-      notes: "Interessado em defensivos para soja. Próxima visita agendada.",
-      createdAt: "2024-01-15"
-    },
-    {
-      id: "2",
-      name: "Maria Santos",
-      phone: "(17) 88888-8888",
-      email: "maria@agro.com",
-      farm: "Agropecuária Santos",
-      city: "Barretos",
-      state: "SP",
-      status: "morno",
-      hectares: 300,
-      mainCrop: "Cana-de-açúcar",
-      otherCrops: "Pastagem",
-      notes: "Aguardando orçamento para herbicidas.",
-      createdAt: "2024-01-10"
-    }
-  ]);
+  const { leads, loading, saveLead, deleteLead } = useLeads();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -120,7 +74,7 @@ const Leads = () => {
     setIsDialogOpen(true);
   };
 
-  const saveLead = () => {
+  const handleSaveLead = async () => {
     if (!formData.name || !formData.phone || !formData.email) {
       toast({
         title: "Erro",
@@ -130,36 +84,30 @@ const Leads = () => {
       return;
     }
 
-    const leadData: Lead = {
-      id: editingLead?.id || Date.now().toString(),
-      ...formData,
-      createdAt: editingLead?.createdAt || new Date().toISOString().split('T')[0]
+    const leadData = {
+      id: editingLead?.id,
+      name: formData.name,
+      phone: formData.phone,
+      email: formData.email,
+      farm: formData.farm,
+      city: formData.city,
+      state: formData.state,
+      status: formData.status,
+      hectares: formData.hectares,
+      mainCrop: formData.mainCrop,
+      otherCrops: formData.otherCrops,
+      notes: formData.notes
     };
 
-    if (editingLead) {
-      setLeads(leads.map(lead => lead.id === editingLead.id ? leadData : lead));
-      toast({
-        title: "Sucesso",
-        description: "Lead atualizado com sucesso!"
-      });
-    } else {
-      setLeads([leadData, ...leads]);
-      toast({
-        title: "Sucesso",
-        description: "Novo lead cadastrado com sucesso!"
-      });
+    const success = await saveLead(leadData);
+    if (success) {
+      setIsDialogOpen(false);
+      resetForm();
     }
-
-    setIsDialogOpen(false);
-    resetForm();
   };
 
-  const deleteLead = (id: string) => {
-    setLeads(leads.filter(lead => lead.id !== id));
-    toast({
-      title: "Sucesso",
-      description: "Lead removido com sucesso!"
-    });
+  const handleDeleteLead = async (id: string) => {
+    await deleteLead(id);
   };
 
   const getStatusBadge = (status: Lead["status"]) => {
@@ -335,7 +283,7 @@ const Leads = () => {
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={saveLead}>
+                <Button onClick={handleSaveLead}>
                   {editingLead ? "Atualizar" : "Cadastrar"}
                 </Button>
               </div>
@@ -495,7 +443,7 @@ const Leads = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => deleteLead(lead.id)}
+                          onClick={() => handleDeleteLead(lead.id)}
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />

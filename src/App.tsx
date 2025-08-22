@@ -11,6 +11,7 @@ import Leads from "./pages/Leads";
 import SprayCalculator from "./pages/SprayCalculator";
 import WeatherForecast from "./pages/WeatherForecast";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -22,12 +23,11 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Layout><Dashboard /></Layout>} />
-          <Route path="/agenda" element={<Layout><Agenda /></Layout>} />
-          <Route path="/leads" element={<Layout><Leads /></Layout>} />
-          <Route path="/calculadora" element={<Layout><SprayCalculator /></Layout>} />
-          <Route path="/previsao" element={<Layout><WeatherForecast /></Layout>} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+          <Route path="/agenda" element={<ProtectedRoute><Layout><Agenda /></Layout></ProtectedRoute>} />
+          <Route path="/leads" element={<ProtectedRoute><Layout><Leads /></Layout></ProtectedRoute>} />
+          <Route path="/calculadora" element={<ProtectedRoute><Layout><SprayCalculator /></Layout></ProtectedRoute>} />
+          <Route path="/previsao" element={<ProtectedRoute><Layout><WeatherForecast /></Layout></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -10,49 +10,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Plus, Clock, User, MapPin, Wrench, ShoppingCart, PhoneCall } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface Appointment {
-  id: string;
-  type: "tarefa" | "servico" | "visita" | "suporte";
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  endTime?: string;
-  responsible: string;
-  client?: string;
-  location?: string;
-  status: "pendente" | "andamento" | "concluida";
-}
+import { useAppointments, type Appointment } from "@/hooks/useAppointments";
 
 const Agenda = () => {
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: "1",
-      type: "visita",
-      title: "Visita comercial - João Silva",
-      description: "Apresentar novos defensivos para soja",
-      date: "2024-01-20",
-      time: "09:00",
-      responsible: "Carlos Vendas",
-      client: "João Silva",
-      location: "Fazenda São João, Ribeirão Preto - SP",
-      status: "pendente"
-    },
-    {
-      id: "2",
-      type: "servico",
-      title: "Manutenção de equipamento",
-      description: "Revisão preventiva do pulverizador",
-      date: "2024-01-21",
-      time: "14:00",
-      endTime: "17:00",
-      responsible: "José Técnico",
-      client: "Maria Santos",
-      status: "andamento"
-    }
-  ]);
-
+  const { appointments, loading, saveAppointment, deleteAppointment } = useAppointments();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [selectedType, setSelectedType] = useState<Appointment["type"]>("tarefa");
@@ -121,7 +82,7 @@ const Agenda = () => {
         description: appointment.description,
         date: appointment.date,
         time: appointment.time,
-        endTime: appointment.endTime || "",
+        endTime: appointment.end_time || "",
         responsible: appointment.responsible,
         client: appointment.client || "",
         location: appointment.location || "",
@@ -134,7 +95,7 @@ const Agenda = () => {
     setIsDialogOpen(true);
   };
 
-  const saveAppointment = () => {
+  const handleSaveAppointment = async () => {
     if (!formData.title || !formData.date || !formData.time || !formData.responsible) {
       toast({
         title: "Erro",
@@ -144,28 +105,25 @@ const Agenda = () => {
       return;
     }
 
-    const appointmentData: Appointment = {
-      id: editingAppointment?.id || Date.now().toString(),
+    const appointmentData = {
+      id: editingAppointment?.id,
       type: selectedType,
-      ...formData
+      title: formData.title,
+      description: formData.description,
+      date: formData.date,
+      time: formData.time,
+      end_time: formData.endTime,
+      responsible: formData.responsible,
+      client: formData.client,
+      location: formData.location,
+      status: formData.status
     };
 
-    if (editingAppointment) {
-      setAppointments(appointments.map(apt => apt.id === editingAppointment.id ? appointmentData : apt));
-      toast({
-        title: "Sucesso",
-        description: "Agendamento atualizado com sucesso!"
-      });
-    } else {
-      setAppointments([appointmentData, ...appointments]);
-      toast({
-        title: "Sucesso",
-        description: "Novo agendamento criado com sucesso!"
-      });
+    const success = await saveAppointment(appointmentData);
+    if (success) {
+      setIsDialogOpen(false);
+      resetForm();
     }
-
-    setIsDialogOpen(false);
-    resetForm();
   };
 
   const getStatusBadge = (status: Appointment["status"]) => {
@@ -445,7 +403,7 @@ const Agenda = () => {
                     <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button onClick={saveAppointment}>
+                    <Button onClick={handleSaveAppointment}>
                       {editingAppointment ? "Atualizar" : "Agendar"}
                     </Button>
                   </div>
@@ -474,7 +432,7 @@ const Agenda = () => {
                     </div>
                     <div className="flex items-center space-x-1">
                       <Clock className="h-3 w-3" />
-                      <span>{appointment.time}{appointment.endTime && ` - ${appointment.endTime}`}</span>
+                      <span>{appointment.time}{appointment.end_time && ` - ${appointment.end_time}`}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <User className="h-3 w-3" />
