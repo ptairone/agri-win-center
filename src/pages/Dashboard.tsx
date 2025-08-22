@@ -2,14 +2,37 @@ import { Calendar, Users, Calculator, CloudSun, TrendingUp, MapPin } from "lucid
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useLeads } from "@/hooks/useLeads";
+import { useAppointments } from "@/hooks/useAppointments";
 import heroFarm from "@/assets/hero-farm.jpg";
 
 const Dashboard = () => {
+  const { leads, loading: leadsLoading } = useLeads();
+  const { appointments, loading: appointmentsLoading } = useAppointments();
+
+  const today = new Date().toISOString().split('T')[0];
+  const thisWeek = (() => {
+    const now = new Date();
+    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+    const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+    return { start: startOfWeek.toISOString().split('T')[0], end: endOfWeek.toISOString().split('T')[0] };
+  })();
+
+  // Calculate real statistics
+  const activeLeads = leads.length;
+  const todayAppointments = appointments.filter(apt => apt.date === today).length;
+  const weekAppointments = appointments.filter(apt => 
+    apt.date >= thisWeek.start && apt.date <= thisWeek.end
+  ).length;
+  const hotLeads = leads.filter(lead => lead.status === "quente").length;
+  const conversionRate = activeLeads > 0 ? Math.round((hotLeads / activeLeads) * 100) : 0;
+
   const quickStats = [
-    { title: "Leads Ativos", value: "24", change: "+12%", icon: Users, color: "text-status-success" },
-    { title: "Agendamentos Hoje", value: "8", change: "+4", icon: Calendar, color: "text-primary" },
-    { title: "Visitas da Semana", value: "15", change: "+20%", icon: MapPin, color: "text-secondary" },
-    { title: "Taxa de Conversão", value: "68%", change: "+5%", icon: TrendingUp, color: "text-accent" },
+    { title: "Leads Ativos", value: activeLeads.toString(), change: "", icon: Users, color: "text-status-success" },
+    { title: "Agendamentos Hoje", value: todayAppointments.toString(), change: "", icon: Calendar, color: "text-primary" },
+    { title: "Visitas da Semana", value: weekAppointments.toString(), change: "", icon: MapPin, color: "text-secondary" },
+    { title: "Taxa de Conversão", value: `${conversionRate}%`, change: "", icon: TrendingUp, color: "text-accent" },
   ];
 
   const quickActions = [
@@ -18,6 +41,22 @@ const Dashboard = () => {
     { title: "Calculadora", description: "Calcular calda de pulverização", icon: Calculator, href: "/calculadora", color: "bg-accent" },
     { title: "Previsão do Tempo", description: "Consultar condições climáticas", icon: CloudSun, href: "/previsao", color: "bg-primary" },
   ];
+
+  // Recent activities from real data
+  const recentActivities = [
+    ...leads.slice(0, 2).map(lead => ({
+      type: 'lead',
+      title: `Novo lead - ${lead.name}`,
+      time: new Date(lead.createdAt).toLocaleString('pt-BR'),
+      color: 'bg-secondary'
+    })),
+    ...appointments.slice(0, 2).map(apt => ({
+      type: 'appointment', 
+      title: `${apt.type} - ${apt.title}`,
+      time: new Date(`${apt.date}T${apt.time}`).toLocaleString('pt-BR'),
+      color: 'bg-primary'
+    }))
+  ].slice(0, 3);
 
   return (
     <div className="space-y-8">
@@ -38,23 +77,36 @@ const Dashboard = () => {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {quickStats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={index} className="shadow-soft hover:shadow-medium transition-shadow">
+        {leadsLoading || appointmentsLoading ? (
+          Array(4).fill(0).map((_, index) => (
+            <Card key={index} className="shadow-soft">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <Icon className={`h-4 w-4 ${stat.color}`} />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className={`text-xs ${stat.color}`}>
-                  {stat.change} desde o mês passado
-                </p>
+                <Skeleton className="h-8 w-12 mb-2" />
+                <Skeleton className="h-3 w-24" />
               </CardContent>
             </Card>
-          );
-        })}
+          ))
+        ) : (
+          quickStats.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={index} className="shadow-soft hover:shadow-medium transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                  <Icon className={`h-4 w-4 ${stat.color}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <p className="text-xs text-muted-foreground">Dados atuais do sistema</p>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
 
       {/* Quick Actions */}
@@ -90,29 +142,36 @@ const Dashboard = () => {
           <CardDescription>Últimas ações realizadas no sistema</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-4 p-3 bg-muted rounded-lg">
-              <div className="bg-status-success w-2 h-2 rounded-full"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Lead convertido - João Silva</p>
-                <p className="text-xs text-muted-foreground">Há 2 horas</p>
-              </div>
+          {leadsLoading || appointmentsLoading ? (
+            <div className="space-y-4">
+              {Array(3).fill(0).map((_, index) => (
+                <div key={index} className="flex items-center space-x-4 p-3 bg-muted rounded-lg">
+                  <Skeleton className="w-2 h-2 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-32 mb-1" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center space-x-4 p-3 bg-muted rounded-lg">
-              <div className="bg-primary w-2 h-2 rounded-full"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Agendamento criado - Visita técnica</p>
-                <p className="text-xs text-muted-foreground">Há 4 horas</p>
-              </div>
+          ) : recentActivities.length > 0 ? (
+            <div className="space-y-4">
+              {recentActivities.map((activity, index) => (
+                <div key={index} className="flex items-center space-x-4 p-3 bg-muted rounded-lg">
+                  <div className={`${activity.color} w-2 h-2 rounded-full`}></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{activity.title}</p>
+                    <p className="text-xs text-muted-foreground">{activity.time}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center space-x-4 p-3 bg-muted rounded-lg">
-              <div className="bg-secondary w-2 h-2 rounded-full"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Novo lead cadastrado - Maria Santos</p>
-                <p className="text-xs text-muted-foreground">Há 6 horas</p>
-              </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Nenhuma atividade recente encontrada</p>
+              <p className="text-xs text-muted-foreground mt-1">Adicione leads ou agendamentos para ver as atividades aqui</p>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
