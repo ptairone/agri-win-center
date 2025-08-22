@@ -14,7 +14,216 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activities: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      appointments: {
+        Row: {
+          client: string | null
+          created_at: string
+          date: string
+          description: string | null
+          end_time: string | null
+          id: string
+          location: string | null
+          responsible: string
+          status: string
+          time: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client?: string | null
+          created_at?: string
+          date: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          responsible: string
+          status?: string
+          time: string
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          responsible?: string
+          status?: string
+          time?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          city: string | null
+          created_at: string
+          email: string
+          farm: string | null
+          hectares: number | null
+          id: string
+          main_crop: string | null
+          name: string
+          notes: string | null
+          other_crops: string | null
+          phone: string
+          state: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          email: string
+          farm?: string | null
+          hectares?: number | null
+          id?: string
+          main_crop?: string | null
+          name: string
+          notes?: string | null
+          other_crops?: string | null
+          phone: string
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          email?: string
+          farm?: string | null
+          hectares?: number | null
+          id?: string
+          main_crop?: string | null
+          name?: string
+          notes?: string | null
+          other_crops?: string | null
+          phone?: string
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          cargo: string | null
+          created_at: string
+          email: string
+          empresa: string | null
+          id: string
+          nome: string
+          telefone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string
+          email: string
+          empresa?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string
+          email?: string
+          empresa?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      spray_calculations: {
+        Row: {
+          area: number
+          created_at: string
+          id: string
+          name: string
+          products: Json
+          results: Json
+          spray_rate: number
+          tank_volume: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          area: number
+          created_at?: string
+          id?: string
+          name: string
+          products: Json
+          results: Json
+          spray_rate: number
+          tank_volume: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          area?: number
+          created_at?: string
+          id?: string
+          name?: string
+          products?: Json
+          results?: Json
+          spray_rate?: number
+          tank_volume?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
