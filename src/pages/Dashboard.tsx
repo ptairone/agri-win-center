@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLeads } from "@/hooks/useLeads";
 import { useAppointments } from "@/hooks/useAppointments";
-import heroFarm from "@/assets/hero-farm.jpg";
+import CalendarWidget from "@/components/CalendarWidget";
 
 const Dashboard = () => {
   const { leads, loading: leadsLoading } = useLeads();
@@ -60,19 +60,13 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
-      {/* Hero Section */}
-      <div 
-        className="relative rounded-2xl overflow-hidden bg-gradient-hero h-64 flex items-center justify-center"
-        style={{
-          backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.3)), url(${heroFarm})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-      >
-        <div className="text-center text-white">
-          <h1 className="text-4xl font-bold mb-4">Bem-vindo ao Wincenter</h1>
-          <p className="text-xl text-white/90">Seu CRM agrícola completo</p>
+      {/* Calendar Widget */}
+      <div>
+        <div className="text-center mb-6">
+          <h1 className="text-4xl font-bold mb-2">Bem-vindo ao Wincenter</h1>
+          <p className="text-xl text-muted-foreground">Seu CRM agrícola completo</p>
         </div>
+        <CalendarWidget />
       </div>
 
       {/* Quick Stats */}
