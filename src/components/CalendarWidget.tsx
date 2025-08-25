@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, User, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Clock, User, MapPin, Trash2 } from "lucide-react";
 import { useAppointments } from "@/hooks/useAppointments";
 import { format, isSameDay } from "date-fns";
 
 const CalendarWidget = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const { appointments } = useAppointments();
+  const { appointments, deleteAppointment } = useAppointments();
 
   // Get appointments for the selected date
   const selectedDateAppointments = selectedDate 
@@ -87,11 +88,21 @@ const CalendarWidget = () => {
                   <div className={`${appointmentTypes[appointment.type as keyof typeof appointmentTypes]?.color || 'bg-gray-500'} w-8 h-8 rounded-full flex items-center justify-center`}>
                     <Clock className="h-4 w-4 text-white" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-medium text-sm">{appointment.title}</h4>
-                      {getStatusBadge(appointment.status)}
-                    </div>
+                   <div className="flex-1 min-w-0">
+                     <div className="flex items-center justify-between mb-1">
+                       <h4 className="font-medium text-sm">{appointment.title}</h4>
+                       <div className="flex items-center space-x-2">
+                         {getStatusBadge(appointment.status)}
+                         <Button
+                           size="sm"
+                           variant="ghost"
+                           onClick={() => deleteAppointment(appointment.id)}
+                           className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                         >
+                           <Trash2 className="h-3 w-3" />
+                         </Button>
+                       </div>
+                     </div>
                     <div className="text-xs text-muted-foreground space-y-1">
                       <div className="flex items-center space-x-1">
                         <Clock className="h-3 w-3" />
