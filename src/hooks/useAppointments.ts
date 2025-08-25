@@ -214,6 +214,30 @@ export const useAppointments = () => {
           fetchAppointments();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'appointments'
+        },
+        (payload) => {
+          const deletedAppointment = payload.old as any;
+          
+          // Só mostrar notificação se não foi o usuário atual que deletou
+          supabase.auth.getUser().then(({ data: userData }) => {
+            if (userData.user && deletedAppointment.user_id !== userData.user.id) {
+              toast({
+                title: "Agendamento Removido",
+                description: `${deletedAppointment.title} foi removido`,
+              });
+            }
+          });
+          
+          // Atualizar lista local
+          fetchAppointments();
+        }
+      )
       .subscribe();
 
     return () => {
