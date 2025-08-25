@@ -24,9 +24,20 @@ export const useAppointments = () => {
   // Carregar compromissos do Supabase
   const fetchAppointments = async () => {
     try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
+      // Se não houver usuário logado, limpar lista e finalizar
+      if (!userData.user) {
+        setAppointments([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('appointments')
         .select('*')
+        .eq('user_id', userData.user.id)
         .order('date', { ascending: true });
 
       if (error) throw error;
@@ -37,7 +48,7 @@ export const useAppointments = () => {
         return time.split(':').slice(0, 2).join(':');
       };
 
-      const formattedAppointments = data.map(apt => ({
+      const formattedAppointments = (data || []).map(apt => ({
         id: apt.id,
         type: apt.type as Appointment["type"],
         title: apt.title,
