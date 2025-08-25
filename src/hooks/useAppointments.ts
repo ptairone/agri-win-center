@@ -145,7 +145,8 @@ export const useAppointments = () => {
 
       if (error) throw error;
 
-      setAppointments(appointments.filter(apt => apt.id !== id));
+      // Atualizar lista local removendo o item deletado
+      setAppointments(prev => prev.filter(apt => apt.id !== id));
       
       toast({
         title: "Sucesso",
