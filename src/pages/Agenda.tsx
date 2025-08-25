@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Plus, Clock, User, MapPin, Wrench, ShoppingCart, PhoneCall } from "lucide-react";
+import { Calendar, Plus, Clock, User, MapPin, Wrench, ShoppingCart, PhoneCall, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAppointments, type Appointment } from "@/hooks/useAppointments";
 
@@ -209,6 +209,18 @@ const Agenda = () => {
                       <p className="text-sm text-muted-foreground">{appointment.time}</p>
                       <p className="text-sm text-muted-foreground">{appointment.responsible}</p>
                     </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`Excluir "${appointment.title}"? Esta ação não pode ser desfeita.`)) {
+                          deleteAppointment(appointment.id);
+                        }
+                      }}
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -244,6 +256,18 @@ const Agenda = () => {
                       </p>
                       <p className="text-sm text-muted-foreground">{appointment.responsible}</p>
                     </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`Excluir \"${appointment.title}\"? Esta ação não pode ser desfeita.`)) {
+                          deleteAppointment(appointment.id);
+                        }
+                      }}
+                    >
+                      <Trash className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -452,13 +476,27 @@ const Agenda = () => {
                     )}
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => openDialog(undefined, appointment)}
-                >
-                  Editar
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openDialog(undefined, appointment)}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(`Excluir "${appointment.title}"? Esta ação não pode ser desfeita.`)) {
+                        deleteAppointment(appointment.id);
+                      }
+                    }}
+                  >
+                    <Trash className="h-4 w-4 mr-2" />
+                    Excluir
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
