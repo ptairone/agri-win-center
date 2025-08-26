@@ -33,6 +33,17 @@ interface WeatherData {
   condition: string;
   icon: string;
   datetime: string;
+  rainProbability?: number;
+  rainAmount?: number;
+}
+
+interface ForecastHour {
+  time: string;
+  temperature: number;
+  condition: string;
+  icon: string;
+  rainProbability: number;
+  rainAmount: number;
 }
 
 const WeatherForecast = () => {
@@ -41,6 +52,7 @@ const WeatherForecast = () => {
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("12:00");
+  const [hourlyForecast, setHourlyForecast] = useState<ForecastHour[]>([]);
   const { toast } = useToast();
 
   const API_KEY = "2266f269be41b5b6234971e5e0a7e46d";
@@ -95,8 +107,22 @@ const WeatherForecast = () => {
           visibility: nearest.visibility ? Math.round(nearest.visibility / 1000) : 0,
           condition: nearest.weather?.[0]?.description || "",
           icon: nearest.weather?.[0]?.icon || "01d",
-          datetime: new Date(nearest.dt * 1000).toLocaleString('pt-BR')
+          datetime: new Date(nearest.dt * 1000).toLocaleString('pt-BR'),
+          rainProbability: Math.round((nearest.pop || 0) * 100),
+          rainAmount: nearest.rain?.['3h'] || 0
         };
+
+        // Próximas 3 previsões (9 horas)
+        const next3Hours = (data.list || []).slice(0, 3).map((item: any) => ({
+          time: new Date(item.dt * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          temperature: Math.round(item.main?.temp),
+          condition: item.weather?.[0]?.description || "",
+          icon: item.weather?.[0]?.icon || "01d",
+          rainProbability: Math.round((item.pop || 0) * 100),
+          rainAmount: item.rain?.['3h'] || 0
+        }));
+
+        setHourlyForecast(next3Hours);
 
         setWeather(weatherData);
         toast({
@@ -104,31 +130,46 @@ const WeatherForecast = () => {
           description: `Previsão obtida para ${weatherData.location} em ${weatherData.datetime}`,
         });
       } else {
-        // Sem data selecionada: usa clima atual
-        const response = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=pt_br`
-        );
+        // Sem data selecionada: busca clima atual + previsão próximas horas
+        const [currentResponse, forecastResponse] = await Promise.all([
+          fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=pt_br`),
+          fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=pt_br`)
+        ]);
 
-        if (!response.ok) {
+        if (!currentResponse.ok || !forecastResponse.ok) {
           throw new Error("Cidade não encontrada");
         }
 
-        const data = await response.json();
+        const [currentData, forecastData] = await Promise.all([
+          currentResponse.json(),
+          forecastResponse.json()
+        ]);
 
         const weatherData: WeatherData = {
-          location: `${data.name}, ${data.sys.country}`,
-          temperature: Math.round(data.main.temp),
-          feelsLike: Math.round(data.main.feels_like),
-          humidity: data.main.humidity,
-          windSpeed: Math.round(data.wind.speed * 3.6), // Convert m/s to km/h
-          windDirection: data.wind.deg,
-          pressure: data.main.pressure,
-          visibility: Math.round(data.visibility / 1000), // Convert to km
-          condition: data.weather[0].description,
-          icon: data.weather[0].icon,
+          location: `${currentData.name}, ${currentData.sys.country}`,
+          temperature: Math.round(currentData.main.temp),
+          feelsLike: Math.round(currentData.main.feels_like),
+          humidity: currentData.main.humidity,
+          windSpeed: Math.round(currentData.wind.speed * 3.6),
+          windDirection: currentData.wind.deg,
+          pressure: currentData.main.pressure,
+          visibility: Math.round(currentData.visibility / 1000),
+          condition: currentData.weather[0].description,
+          icon: currentData.weather[0].icon,
           datetime: new Date().toLocaleString('pt-BR')
         };
 
+        // Próximas 3 previsões (9 horas)
+        const next3Hours = (forecastData.list || []).slice(0, 3).map((item: any) => ({
+          time: new Date(item.dt * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          temperature: Math.round(item.main?.temp),
+          condition: item.weather?.[0]?.description || "",
+          icon: item.weather?.[0]?.icon || "01d",
+          rainProbability: Math.round((item.pop || 0) * 100),
+          rainAmount: item.rain?.['3h'] || 0
+        }));
+
+        setHourlyForecast(next3Hours);
         setWeather(weatherData);
         toast({
           title: "Sucesso",
@@ -248,6 +289,54 @@ const WeatherForecast = () => {
         </CardContent>
       </Card>
 
+      {/* Hourly Forecast */}
+      {hourlyForecast.length > 0 && (
+        <Card className="shadow-soft">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Droplets className="h-5 w-5 text-blue-500" />
+              <span>Próximas 9 Horas - Probabilidade de Chuva</span>
+            </CardTitle>
+            <CardDescription>Previsão detalhada por período de 3 horas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {hourlyForecast.map((forecast, index) => (
+                <div key={index} className="p-4 bg-muted rounded-lg border">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-semibold">{forecast.time}</span>
+                    <img 
+                      src={`https://openweathermap.org/img/wn/${forecast.icon}@2x.png`}
+                      alt={forecast.condition}
+                      className="w-10 h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Temp:</span>
+                      <span className="font-medium">{forecast.temperature}°C</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Chuva:</span>
+                      <span className={`font-medium ${forecast.rainProbability > 60 ? 'text-blue-600' : forecast.rainProbability > 30 ? 'text-yellow-600' : 'text-green-600'}`}>
+                        {forecast.rainProbability}%
+                      </span>
+                    </div>
+                    {forecast.rainAmount > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Volume:</span>
+                        <span className="font-medium text-blue-600">{forecast.rainAmount}mm</span>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground capitalize">{forecast.condition}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Weather Results */}
       {weather && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -294,6 +383,15 @@ const WeatherForecast = () => {
                       <p className="text-sm text-muted-foreground">Vento</p>
                     </div>
                   </div>
+                  {weather.rainProbability !== undefined && (
+                    <div className="flex items-center space-x-3">
+                      <Droplets className="h-5 w-5 text-blue-500" />
+                      <div>
+                        <p className="font-medium">{weather.rainProbability}%</p>
+                        <p className="text-sm text-muted-foreground">Chuva</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
