@@ -69,8 +69,8 @@ const WeatherForecast = () => {
 
     setLoading(true);
     try {
-      // Se o usuário selecionou uma data, usamos o endpoint de previsão (5 dias/3h)
       if (selectedDate) {
+        // Com data selecionada: usa previsão
         const response = await fetch(
           `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=pt_br`
         );
@@ -81,13 +81,13 @@ const WeatherForecast = () => {
 
         const data = await response.json();
 
-        // Combina data e hora selecionadas (ou usa 12:00 por padrão)
+        // Combina data e hora selecionadas
         const [h, m] = (selectedTime || "12:00").split(":").map(Number);
         const target = new Date(selectedDate);
         target.setHours(h || 12, m || 0, 0, 0);
         const targetMs = target.getTime();
 
-        // Escolhe o horário de previsão mais próximo do alvo
+        // Encontra previsão mais próxima
         const nearest = (data.list || []).reduce((prev: any, curr: any) => {
           const prevDiff = Math.abs((prev?.dt || 0) * 1000 - targetMs);
           const currDiff = Math.abs((curr?.dt || 0) * 1000 - targetMs);
@@ -123,14 +123,13 @@ const WeatherForecast = () => {
         }));
 
         setHourlyForecast(next3Hours);
-
         setWeather(weatherData);
         toast({
           title: "Sucesso",
           description: `Previsão obtida para ${weatherData.location} em ${weatherData.datetime}`,
         });
       } else {
-        // Sem data selecionada: busca clima atual + previsão próximas horas
+        // Sem data: clima atual + previsão próximas horas
         const [currentResponse, forecastResponse] = await Promise.all([
           fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=pt_br`),
           fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=pt_br`)
