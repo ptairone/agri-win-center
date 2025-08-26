@@ -57,35 +57,84 @@ const WeatherForecast = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=pt_br`
-      );
-      
-      if (!response.ok) {
-        throw new Error("Cidade não encontrada");
+      // Se o usuário selecionou uma data, usamos o endpoint de previsão (5 dias/3h)
+      if (selectedDate) {
+        const response = await fetch(
+          `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=pt_br`
+        );
+
+        if (!response.ok) {
+          throw new Error("Cidade não encontrada");
+        }
+
+        const data = await response.json();
+
+        // Combina data e hora selecionadas (ou usa 12:00 por padrão)
+        const [h, m] = (selectedTime || "12:00").split(":").map(Number);
+        const target = new Date(selectedDate);
+        target.setHours(h || 12, m || 0, 0, 0);
+        const targetMs = target.getTime();
+
+        // Escolhe o horário de previsão mais próximo do alvo
+        const nearest = (data.list || []).reduce((prev: any, curr: any) => {
+          const prevDiff = Math.abs((prev?.dt || 0) * 1000 - targetMs);
+          const currDiff = Math.abs((curr?.dt || 0) * 1000 - targetMs);
+          return currDiff < prevDiff ? curr : prev;
+        }, (data.list || [])[0]);
+
+        if (!nearest) throw new Error("Não há previsão disponível para essa data/hora");
+
+        const weatherData: WeatherData = {
+          location: `${data.city?.name}, ${data.city?.country}`,
+          temperature: Math.round(nearest.main?.temp),
+          feelsLike: Math.round(nearest.main?.feels_like),
+          humidity: nearest.main?.humidity,
+          windSpeed: Math.round((nearest.wind?.speed || 0) * 3.6),
+          windDirection: nearest.wind?.deg ?? 0,
+          pressure: nearest.main?.pressure,
+          visibility: nearest.visibility ? Math.round(nearest.visibility / 1000) : 0,
+          condition: nearest.weather?.[0]?.description || "",
+          icon: nearest.weather?.[0]?.icon || "01d",
+          datetime: new Date(nearest.dt * 1000).toLocaleString('pt-BR')
+        };
+
+        setWeather(weatherData);
+        toast({
+          title: "Sucesso",
+          description: `Previsão obtida para ${weatherData.location} em ${weatherData.datetime}`,
+        });
+      } else {
+        // Sem data selecionada: usa clima atual
+        const response = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=pt_br`
+        );
+
+        if (!response.ok) {
+          throw new Error("Cidade não encontrada");
+        }
+
+        const data = await response.json();
+
+        const weatherData: WeatherData = {
+          location: `${data.name}, ${data.sys.country}`,
+          temperature: Math.round(data.main.temp),
+          feelsLike: Math.round(data.main.feels_like),
+          humidity: data.main.humidity,
+          windSpeed: Math.round(data.wind.speed * 3.6), // Convert m/s to km/h
+          windDirection: data.wind.deg,
+          pressure: data.main.pressure,
+          visibility: Math.round(data.visibility / 1000), // Convert to km
+          condition: data.weather[0].description,
+          icon: data.weather[0].icon,
+          datetime: new Date().toLocaleString('pt-BR')
+        };
+
+        setWeather(weatherData);
+        toast({
+          title: "Sucesso",
+          description: `Dados meteorológicos obtidos para ${weatherData.location}`,
+        });
       }
-
-      const data = await response.json();
-      
-      const weatherData: WeatherData = {
-        location: `${data.name}, ${data.sys.country}`,
-        temperature: Math.round(data.main.temp),
-        feelsLike: Math.round(data.main.feels_like),
-        humidity: data.main.humidity,
-        windSpeed: Math.round(data.wind.speed * 3.6), // Convert m/s to km/h
-        windDirection: data.wind.deg,
-        pressure: data.main.pressure,
-        visibility: Math.round(data.visibility / 1000), // Convert to km
-        condition: data.weather[0].description,
-        icon: data.weather[0].icon,
-        datetime: new Date().toLocaleString('pt-BR')
-      };
-
-      setWeather(weatherData);
-      toast({
-        title: "Sucesso",
-        description: `Dados meteorológicos obtidos para ${weatherData.location}`,
-      });
     } catch (error) {
       toast({
         title: "Erro",
