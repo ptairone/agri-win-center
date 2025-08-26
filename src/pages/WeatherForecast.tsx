@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Search, 
   CloudSun, 
@@ -12,9 +14,12 @@ import {
   Eye,
   Gauge,
   MapPin,
-  Clock
+  Clock,
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface WeatherData {
   location: string;
@@ -34,6 +39,8 @@ const WeatherForecast = () => {
   const [city, setCity] = useState("");
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedTime, setSelectedTime] = useState<string>("12:00");
   const { toast } = useToast();
 
   const API_KEY = "2266f269be41b5b6234971e5e0a7e46d";
@@ -118,7 +125,7 @@ const WeatherForecast = () => {
           </CardTitle>
           <CardDescription>Digite o nome da cidade para consultar o clima</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex space-x-2">
             <div className="flex-1">
               <Label htmlFor="city" className="sr-only">Cidade</Label>
@@ -141,6 +148,54 @@ const WeatherForecast = () => {
               Buscar
             </Button>
           </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Data (opcional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "dd/MM/yyyy") : "Selecione a data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="time">Horário (opcional)</Label>
+              <Input
+                id="time"
+                type="time"
+                value={selectedTime}
+                onChange={(e) => setSelectedTime(e.target.value)}
+                className="h-10"
+              />
+            </div>
+          </div>
+          
+          {selectedDate && (
+            <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+              <Clock className="inline h-4 w-4 mr-2" />
+              Previsão para: {format(selectedDate, "dd/MM/yyyy")} às {selectedTime}
+            </div>
+          )}
         </CardContent>
       </Card>
 
