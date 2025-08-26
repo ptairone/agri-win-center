@@ -99,6 +99,7 @@ export type Database = {
         Row: {
           application_width: number
           area_covered: number | null
+          attachments: Json | null
           created_at: string
           culture: string
           droplet_type: string
@@ -118,6 +119,7 @@ export type Database = {
         Insert: {
           application_width: number
           area_covered?: number | null
+          attachments?: Json | null
           created_at?: string
           culture: string
           droplet_type: string
@@ -137,6 +139,7 @@ export type Database = {
         Update: {
           application_width?: number
           area_covered?: number | null
+          attachments?: Json | null
           created_at?: string
           culture?: string
           droplet_type?: string

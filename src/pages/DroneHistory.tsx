@@ -14,7 +14,8 @@ import type { DroneFlightData } from "@/hooks/useDroneFlights";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane, Plus, Trash2, Download, Eye, Calendar, MapPin } from "lucide-react";
+import { Plane, Plus, Trash2, Download, Eye, Calendar, MapPin, Camera, FileVideo, FileImage, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const flightSchema = z.object({
   flight_date: z.string(),
@@ -37,9 +38,11 @@ interface Product {
 }
 
 const DroneHistory = () => {
-  const { createFlight, flights, isLoading } = useDroneFlights();
+  const { createFlight, flights, isLoading, uploadAttachment, updateFlightAttachments } = useDroneFlights();
+  const { toast } = useToast();
   const [liquidProducts, setLiquidProducts] = useState<Product[]>([{ name: "", dosage: 0, unit: "L/ha" }]);
   const [solidProducts, setSolidProducts] = useState<Product[]>([{ name: "", dosage: 0, unit: "kg/ha" }]);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [activeTab, setActiveTab] = useState("new-flight");
 
   const form = useForm<z.infer<typeof flightSchema>>({
@@ -87,6 +90,54 @@ const DroneHistory = () => {
     }
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const validFiles = files.filter(file => {
+      const isValidType = file.type.startsWith('image/') || file.type.startsWith('video/');
+      const isValidSize = file.size <= 50 * 1024 * 1024; // 50MB max
+      
+      if (!isValidType) {
+        toast({
+          title: "Tipo de arquivo inválido",
+          description: "Apenas imagens e vídeos são permitidos.",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      if (!isValidSize) {
+        toast({
+          title: "Arquivo muito grande",
+          description: "O arquivo deve ter no máximo 50MB.",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      return true;
+    });
+    
+    setAttachedFiles(prev => [...prev, ...validFiles]);
+  };
+
+  const removeFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return <FileImage className="h-4 w-4" />;
+    if (type.startsWith('video/')) return <FileVideo className="h-4 w-4" />;
+    return <Camera className="h-4 w-4" />;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const onSubmit = async (data: z.infer<typeof flightSchema>) => {
     const flightData: DroneFlightData = {
       flight_date: data.flight_date,
@@ -104,15 +155,40 @@ const DroneHistory = () => {
       solid_products: solidProducts.filter(p => p.name.trim() !== ""),
     };
 
-    await createFlight(flightData);
-    
-    // Reset form
-    form.reset();
-    setLiquidProducts([{ name: "", dosage: 0, unit: "L/ha" }]);
-    setSolidProducts([{ name: "", dosage: 0, unit: "kg/ha" }]);
-    
-    // Switch to history tab
-    setActiveTab("history");
+    try {
+      const newFlight = await createFlight(flightData);
+      
+      // Upload attached files if any
+      if (attachedFiles.length > 0 && newFlight?.id && uploadAttachment) {
+        const uploadedFiles = [];
+        for (const file of attachedFiles) {
+          try {
+            const uploadedFile = await uploadAttachment(file, newFlight.id);
+            if (uploadedFile) {
+              uploadedFiles.push(uploadedFile);
+            }
+          } catch (error) {
+            console.error('Error uploading file:', error);
+          }
+        }
+        
+        // Update flight with attachments if any were uploaded
+        if (uploadedFiles.length > 0 && updateFlightAttachments) {
+          await updateFlightAttachments(newFlight.id, uploadedFiles);
+        }
+      }
+      
+      // Reset form
+      form.reset();
+      setLiquidProducts([{ name: "", dosage: 0, unit: "L/ha" }]);
+      setSolidProducts([{ name: "", dosage: 0, unit: "kg/ha" }]);
+      setAttachedFiles([]);
+      
+      // Switch to history tab
+      setActiveTab("history");
+    } catch (error) {
+      console.error('Error creating flight:', error);
+    }
   };
 
   const exportToCSV = () => {
@@ -522,6 +598,61 @@ const DroneHistory = () => {
                 )}
               />
 
+              <Separator />
+
+              {/* Seção de Upload de Arquivos */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold">Fotos e Vídeos</h3>
+                    <p className="text-sm text-muted-foreground">
+                      anexe fotos ou vídeos do registro de voo (máx. 50MB por arquivo)
+                    </p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('file-upload')?.click()}>
+                    <Camera className="h-4 w-4 mr-2" />
+                    Anexar Arquivo
+                  </Button>
+                </div>
+                
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  accept="image/*,video/*"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+
+                {/* Lista de arquivos anexados */}
+                {attachedFiles.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Arquivos Anexados</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {attachedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                          <div className="flex items-center gap-2">
+                            {getFileIcon(file.type)}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{file.name}</p>
+                              <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? "Salvando..." : "Salvar Registro de Voo"}
               </Button>
@@ -681,6 +812,36 @@ const DroneHistory = () => {
                                     <p className="mt-1">{flight.notes}</p>
                                   </div>
                                 )}
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {/* Arquivos Anexados */}
+                        {Array.isArray(flight.attachments) && flight.attachments.length > 0 && (
+                          <>
+                            <Separator />
+                            <div>
+                              <h4 className="font-medium mb-3">Fotos e Vídeos</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {flight.attachments.map((attachment: any, index: number) => (
+                                  <div key={index} className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                                    <div className="flex items-center gap-2">
+                                      {getFileIcon(attachment.type)}
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-medium truncate">{attachment.name}</p>
+                                        <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => window.open(attachment.url, '_blank')}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           </>
